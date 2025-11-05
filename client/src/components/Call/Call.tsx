@@ -4,10 +4,9 @@ import Peer from "peerjs";
 const Call = () => {
   const [peerId, setPeerId] = useState<string>("");
   const [remotePeerIdValue, setRemotePeerIdValue] = useState<string>("");
-
-  const remoteVideoRef = useRef(null);
-  const currentUserVideoRef = useRef(null);
-  const peerInstance = useRef(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const currentUserVideoRef = useRef<HTMLVideoElement>(null);
+  const peerInstance = useRef<Peer | null>(null);
 
   useEffect(() => {
     const peer = new Peer();
@@ -20,34 +19,44 @@ const Call = () => {
       navigator.mediaDevices
         .getUserMedia({ video: true, audio: true })
         .then((mediaStream) => {
-          currentUserVideoRef.current.srcObject = mediaStream;
-          currentUserVideoRef.current.play();
+          if (currentUserVideoRef.current) {
+            currentUserVideoRef.current.srcObject = mediaStream;
+            currentUserVideoRef.current.play();
+          }
           call.answer(mediaStream);
-          call.on("stream", (remoteStream) => {
-            remoteVideoRef.current.srcObject = remoteStream;
-            remoteVideoRef.current.play();
+          call.on("stream", (remoteStream: MediaStream) => {
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.srcObject = remoteStream;
+              remoteVideoRef.current.play();
+            }
           });
         })
         .catch((error) => {
           console.error("Error accessing media devices:", error);
         });
     });
+
     peerInstance.current = peer;
   }, []);
 
-  const call = (remotePeerId) => {
+  const call = (remotePeerId: string) => {
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
       .then((mediaStream) => {
-        currentUserVideoRef.current.srcObject = mediaStream;
-        currentUserVideoRef.current.play();
+        if (currentUserVideoRef.current) {
+          currentUserVideoRef.current.srcObject = mediaStream;
+          currentUserVideoRef.current.play();
+        }
 
-        const call = peerInstance.current.call(remotePeerId, mediaStream);
-
-        call.on("stream", (remoteStream) => {
-          remoteVideoRef.current.srcObject = remoteStream;
-          remoteVideoRef.current.play();
-        });
+        if (peerInstance.current) {
+          const call = peerInstance.current.call(remotePeerId, mediaStream);
+          call.on("stream", (remoteStream: MediaStream) => {
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.srcObject = remoteStream;
+              remoteVideoRef.current.play();
+            }
+          });
+        }
       })
       .catch((error) => {
         console.error("Error accessing media devices:", error);
