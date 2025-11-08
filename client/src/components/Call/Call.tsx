@@ -1,60 +1,52 @@
-import { useEffect, useState } from "react";
-import io from "socket.io-client";
-import Peer from "peerjs";
+import React, { useEffect, useRef } from "react";
+import { usePeerChat } from "../../hooks/usePeerChat";
 
-const socket = io("http://localhost:5000");
-
-export const usePeerChat = () => {
-  const [peer, setPeer] = useState<Peer>();
-  const [partnerId, setPartnerId] = useState<string>();
-  const [myStream, setMyStream] = useState<MediaStream>();
-  const [remoteStream, setRemoteStream] = useState<MediaStream>();
-  const [status, setStatus] = useState<string>("idle");
+export const VideoChat: React.FC = () => {
+  const { status, myStream, remoteStream, findPartner } = usePeerChat();
+  const myVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    const newPeer = new Peer();
-    setPeer(newPeer);
-
-    newPeer.on("open", (id) => {
-      console.log("Peer ID:", id);
-      socket.emit("find-partner");
-    });
-
-    socket.on("waiting", () => setStatus("waiting for partner..."));
-
-    socket.on("partner-found", async ({ partnerId }) => {
-      setPartnerId(partnerId);
-      setStatus("connected");
-    });
-
-    return () => {
-      socket.disconnect();
-      newPeer.destroy();
-    };
-  }, []);
+    if (myVideoRef.current && myStream) {
+      myVideoRef.current.srcObject = myStream;
+    }
+  }, [myStream]);
 
   useEffect(() => {
-    if (!peer || !partnerId) return;
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
 
-    navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
-      .then((stream) => {
-        setMyStream(stream);
+  return (
+    <div className="flex flex-col items-center p-6 gap-4">
+      <h2 className="text-xl font-bold">Omegle Clone 🎥</h2>
+      <p>{status}</p>
 
-        const call = peer.call(partnerId, stream);
+      <button
+        className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+        onClick={findPartner}
+      >
+        Start Chat
+      </button>
 
-        call.on("stream", (remote) => {
-          setRemoteStream(remote);
-        });
-
-        peer.on("call", (incomingCall) => {
-          incomingCall.answer(stream);
-          incomingCall.on("stream", (remote) => setRemoteStream(remote));
-        });
-      });
-  }, [partnerId, peer]);
-
-  return { status, myStream, remoteStream };
+      <div className="flex gap-4 mt-6">
+        <video
+          ref={myVideoRef}
+          autoPlay
+          playsInline
+          muted
+          className="w-60 h-44 rounded-md bg-black"
+        />
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className="w-60 h-44 rounded-md bg-black"
+        />
+      </div>
+    </div>
+  );
 };
 
 // import { useEffect, useRef, useState } from "react";

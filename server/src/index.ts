@@ -9,11 +9,11 @@ const io = new Server(server, { cors: { origin: "*" } });
 let waitingUser: string | null = null; // socket id of waiting user
 const rooms: Record<string, [string, string]> = {}; // roomId -> [user1, user2]
 
-
 io.on("connection", (socket) => {
   console.log("User connected", socket.id);
   // Handle when user wants to find a partner
   socket.on("find-partner", () => {
+    console.log("find-partner from", socket.id);
     if (waitingUser) {
       // someone is waiting -> create room
       const roomId = `${waitingUser}-${socket.id}`;
