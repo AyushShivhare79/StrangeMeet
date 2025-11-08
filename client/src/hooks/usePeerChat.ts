@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import io from "socket.io-client";
 import Peer from "peerjs";
 
-const socket = io("ws://localhost:5000");
+const socket = io(import.meta.env.VITE_SOCKET_SERVER_URL);
 
 export const usePeerChat = () => {
   const [peer, setPeer] = useState<Peer>();
+  const [myId, setMyId] = useState<string>();
   const [partnerId, setPartnerId] = useState<string>();
   const [myStream, setMyStream] = useState<MediaStream>();
   const [remoteStream, setRemoteStream] = useState<MediaStream>();
@@ -15,7 +16,8 @@ export const usePeerChat = () => {
     const newPeer = new Peer();
     setPeer(newPeer);
 
-    newPeer.on("open", () => {
+    newPeer.on("open", (id: string) => {
+      setMyId(id);
       console.log("PeerJS connected");
     });
 
@@ -27,11 +29,6 @@ export const usePeerChat = () => {
       setPartnerId(partnerId);
       setStatus("connected");
     });
-
-    // return () => {
-    //   socket.disconnect();
-    //   newPeer.destroy();
-    // };
   }, []);
 
   // Start finding partner
@@ -45,6 +42,9 @@ export const usePeerChat = () => {
   useEffect(() => {
     if (!peer || !partnerId) return;
 
+    console.log("Starting video connection with", partnerId);
+    console.log("My peer ID is", peer.id);
+
     (async () => {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -55,6 +55,7 @@ export const usePeerChat = () => {
       const call = peer.call(partnerId, stream);
 
       call.on("stream", (remote) => {
+        console.log("Received remote stream");
         setRemoteStream(remote);
       });
 
@@ -65,5 +66,5 @@ export const usePeerChat = () => {
     })();
   }, [partnerId, peer]);
 
-  return { status, myStream, remoteStream, findPartner };
+  return {myId, status, myStream, remoteStream, findPartner };
 };
