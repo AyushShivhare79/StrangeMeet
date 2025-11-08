@@ -7,7 +7,8 @@ const socket = io(import.meta.env.VITE_SOCKET_SERVER_URL);
 export const usePeerChat = () => {
   const [peer, setPeer] = useState<Peer>();
   const [myId, setMyId] = useState<string>();
-  const [partnerId, setPartnerId] = useState<string>();
+  const [partnerPeerId, setPartnerPeerId] = useState<string>();
+  const [shouldInitiateCall, setShouldInitiateCall] = useState<boolean>(false);
   const [myStream, setMyStream] = useState<MediaStream>();
   const [remoteStream, setRemoteStream] = useState<MediaStream>();
   const [status, setStatus] = useState<string>("idle");
@@ -18,32 +19,40 @@ export const usePeerChat = () => {
 
     newPeer.on("open", (id: string) => {
       setMyId(id);
-      console.log("PeerJS connected");
+      console.log("PeerJS connected with ID:", id);
     });
 
     socket.on("waiting", () => {
       setStatus("waiting for partner...");
     });
 
-    socket.on("partner-found", async ({ partnerId }) => {
-      setPartnerId(partnerId);
+    socket.on("partner-found", async ({ partnerPeerId, shouldInitiateCall }) => {
+      console.log("Partner found with peer ID:", partnerPeerId);
+      console.log("Should I initiate call?", shouldInitiateCall);
+      setPartnerPeerId(partnerPeerId);
+      setShouldInitiateCall(shouldInitiateCall);
       setStatus("connected");
     });
   }, []);
 
   // Start finding partner
   const findPartner = () => {
-    console.log("Finding partner...");
-
-    socket.emit("find-partner");
+    if (!myId) {
+      console.error("Peer ID not ready yet");
+      return;
+    }
+    
+    console.log("Finding partner with my peer ID:", myId);
+    socket.emit("find-partner", { peerId: myId });
   };
 
   // Handle video connection
   useEffect(() => {
-    if (!peer || !partnerId) return;
+    if (!peer || !partnerPeerId) return;
 
-    console.log("Starting video connection with", partnerId);
-    console.log("My peer ID is", peer.id);
+    console.log("Setting up video connection");
+    console.log("Partner peer ID:", partnerPeerId);
+    console.log("Should initiate call:", shouldInitiateCall);
 
     (async () => {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -52,19 +61,31 @@ export const usePeerChat = () => {
       });
       setMyStream(stream);
 
-      const call = peer.call(partnerId, stream);
-
-      call.on("stream", (remote) => {
-        console.log("Received remote stream");
-        setRemoteStream(remote);
-      });
-
+      // Set up incoming call handler FIRST (both peers need this)
       peer.on("call", (incomingCall) => {
+        console.log("📞 Incoming call, answering...");
         incomingCall.answer(stream);
-        incomingCall.on("stream", (remote) => setRemoteStream(remote));
+        incomingCall.on("stream", (remote) => {
+          console.log("📹 Received remote stream from incoming call");
+          setRemoteStream(remote);
+        });
       });
-    })();
-  }, [partnerId, peer]);
 
-  return {myId, status, myStream, remoteStream, findPartner };
+      // Only ONE peer should initiate the call
+      if (shouldInitiateCall) {
+        console.log("📞 I'm initiating the call to:", partnerPeerId);
+        setTimeout(() => {
+          const call = peer.call(partnerPeerId, stream);
+          call.on("stream", (remote) => {
+            console.log("📹 Received remote stream from outgoing call");
+            setRemoteStream(remote);
+          });
+        }, 1000); // Small delay to ensure other peer is ready
+      } else {
+        console.log("👂 Waiting for incoming call...");
+      }
+    })();
+  }, [partnerPeerId, peer, shouldInitiateCall]);
+
+  return { myId, status, myStream, remoteStream, findPartner };
 };
