@@ -12,6 +12,7 @@ export const usePeerChat = () => {
   const [myStream, setMyStream] = useState<MediaStream>();
   const [remoteStream, setRemoteStream] = useState<MediaStream>();
   const [status, setStatus] = useState<string>("idle");
+  
 
   useEffect(() => {
     const newPeer = new Peer();
