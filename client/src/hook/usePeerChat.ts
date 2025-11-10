@@ -26,27 +26,28 @@ export const usePeerChat = () => {
       setStatus("waiting for partner...");
     });
 
-    socket.on("partner-found", async ({ partnerPeerId, shouldInitiateCall }) => {
-      console.log("Partner found with peer ID:", partnerPeerId);
-      console.log("Should I initiate call?", shouldInitiateCall);
-      setPartnerPeerId(partnerPeerId);
-      setShouldInitiateCall(shouldInitiateCall);
-      setStatus("connected");
-    });
+    socket.on(
+      "partner-found",
+      async ({ partnerPeerId, shouldInitiateCall }) => {
+        console.log("Partner found with peer ID:", partnerPeerId);
+        console.log("Should I initiate call?", shouldInitiateCall);
+        setPartnerPeerId(partnerPeerId);
+        setShouldInitiateCall(shouldInitiateCall);
+        setStatus("connected");
+      }
+    );
   }, []);
 
-  // Start finding partner
   const findPartner = () => {
     if (!myId) {
       console.error("Peer ID not ready yet");
       return;
     }
-    
+
     console.log("Finding partner with my peer ID:", myId);
     socket.emit("find-partner", { peerId: myId });
   };
 
-  // Handle video connection
   useEffect(() => {
     if (!peer || !partnerPeerId) return;
 
@@ -61,7 +62,6 @@ export const usePeerChat = () => {
       });
       setMyStream(stream);
 
-      // Set up incoming call handler FIRST (both peers need this)
       peer.on("call", (incomingCall) => {
         console.log("📞 Incoming call, answering...");
         incomingCall.answer(stream);
@@ -71,7 +71,6 @@ export const usePeerChat = () => {
         });
       });
 
-      // Only ONE peer should initiate the call
       if (shouldInitiateCall) {
         console.log("📞 I'm initiating the call to:", partnerPeerId);
         setTimeout(() => {
@@ -80,7 +79,7 @@ export const usePeerChat = () => {
             console.log("📹 Received remote stream from outgoing call");
             setRemoteStream(remote);
           });
-        }, 1000); // Small delay to ensure other peer is ready
+        }, 1000);
       } else {
         console.log("👂 Waiting for incoming call...");
       }
