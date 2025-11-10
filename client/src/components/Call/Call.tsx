@@ -24,45 +24,53 @@ export const VideoChat: React.FC = () => {
   }, [remoteStream]);
 
   return (
-    <div className="flex flex-col items-center p-6 gap-4">
+    <div className="flex flex-col border border-red-500 h-dvh p-6 gap-4">
       <div className="flex border border-black rounded-xl w-full justify-between items-center px-4 py-2 mb-4">
         <h2 className="text-xl font-bold">Strange Meet</h2>
-
-        <Button className="p-5">SignIn</Button>
+        <div className="flex items-center gap-4">
+          <h1 className="font-medium font-serif">Online 5</h1>
+          <Button className="p-5">SignIn</Button>
+        </div>
       </div>
 
-      <p>{myId}</p>
-      <p>{status}</p>
+      {/* <p>{myId}</p> */}
 
-      <Button
-        className="px-4 py-2 bg-blue-500 text-white rounded-lg"
-        onClick={findPartner}
-      >
-        Start Chat
-      </Button>
+      <div className="border h-full space-y-2 border-black">
+        <div className="grid grid-cols-5 gap-4 h-full p-4">
+          <div className="col-span-2 flex flex-col items-center gap-4 border border-black">
+            <div>
+              <video
+                ref={myVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-80 h-80 rounded-md bg-black"
+              />
+            </div>
 
-      {/* <div className="flex gap-4 mt-6">
-        <div>
-          <h1>ME</h1>
+            <div>
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className="w-80 h-80 rounded-md bg-black"
+              />
+            </div>
 
-          <video
-            ref={myVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-60 h-44 rounded-md bg-black"
-          />
+            <p>{status}</p>
+
+            <Button
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+              onClick={findPartner}
+            >
+              Start Chat
+            </Button>
+          </div>
+          <div className="col-span-3 border border-black flex items-center justify-center">
+            <div>Chat</div>
+          </div>
         </div>
-        <div>
-          <h1>PARTNER</h1>
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className="w-60 h-44 rounded-md bg-black"
-          />
-        </div>
-      </div> */}
+      </div>
     </div>
   );
 };
