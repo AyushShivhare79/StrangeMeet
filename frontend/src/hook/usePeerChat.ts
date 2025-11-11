@@ -40,7 +40,7 @@ export const usePeerChat = () => {
     newPeer.on("connection", (conn) => {
       console.log("📨 Incoming data connection");
       dataConnectionRef.current = conn;
-      
+
       conn.on("open", () => {
         console.log("✅ Data connection opened (incoming)");
       });
@@ -125,7 +125,7 @@ export const usePeerChat = () => {
 
       if (shouldInitiateCall) {
         console.log("📞 I'm initiating the call to:", partnerPeerId);
-        
+
         // Initiate data connection
         setTimeout(() => {
           const dataConn = peer.connect(partnerPeerId);

@@ -4,8 +4,16 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
 export const VideoChat: React.FC = () => {
-  const { setText, text, messages, handleSend, status, myStream, remoteStream, findPartner } =
-    usePeerChat();
+  const {
+    setText,
+    text,
+    messages,
+    handleSend,
+    status,
+    myStream,
+    remoteStream,
+    findPartner,
+  } = usePeerChat();
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -86,7 +94,10 @@ export const VideoChat: React.FC = () => {
                 <div key={index}>{renderMessage({ item: msg })}</div>
               ))}
             </div>
-            <form onSubmit={handleSubmit} className="flex items-center gap-2 absolute bottom-4 w-full px-4">
+            <form
+              onSubmit={handleSubmit}
+              className="flex items-center gap-2 absolute bottom-4 w-full px-4"
+            >
               <Input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
