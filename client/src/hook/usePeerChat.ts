@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import io from "socket.io-client";
 import Peer from "peerjs";
+import type { DataConnection } from "peerjs";
 
 const socket = io(import.meta.env.VITE_SOCKET_SERVER_URL);
 
@@ -16,16 +17,15 @@ export const usePeerChat = () => {
   const [shouldInitiateCall, setShouldInitiateCall] = useState<boolean>(false);
   const [myStream, setMyStream] = useState<MediaStream>();
   const [remoteStream, setRemoteStream] = useState<MediaStream>();
-  const [status, setStatus] = useState<string>("idle");
+  const [status, setStatus] = useState<string>("Idle");
 
   const [text, setText] = useState<string>("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      type: "receiver",
-      message: "Hello! How are you?",
-    },
-    { type: "sender", message: "I'm good, thank you! How about you?" },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const dataConnectionRef = useRef<DataConnection | null>(null);
+
+  const handleNewMessage = useCallback((newMessage: Message) => {
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
+  }, []);
 
   useEffect(() => {
     const newPeer = new Peer();
@@ -34,6 +34,26 @@ export const usePeerChat = () => {
     newPeer.on("open", (id: string) => {
       setMyId(id);
       console.log("PeerJS connected with ID:", id);
+    });
+
+    // Listen for incoming data connections
+    newPeer.on("connection", (conn) => {
+      console.log("📨 Incoming data connection");
+      dataConnectionRef.current = conn;
+      
+      conn.on("open", () => {
+        console.log("✅ Data connection opened (incoming)");
+      });
+
+      conn.on("data", (data) => {
+        console.log("📩 Received message:", data);
+        handleNewMessage({ type: "receiver", message: data as string });
+      });
+
+      conn.on("close", () => {
+        console.log("❌ Data connection closed");
+        dataConnectionRef.current = null;
+      });
     });
 
     socket.on("waiting", () => {
@@ -50,17 +70,22 @@ export const usePeerChat = () => {
         setStatus("connected");
       }
     );
-  }, []);
 
-  const handleNewMessage = useCallback((newMessage: Message) => {
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
-  }, []);
+    return () => {
+      if (dataConnectionRef.current) {
+        dataConnectionRef.current.close();
+      }
+    };
+  }, [handleNewMessage]);
 
   const handleSend = () => {
-    if (socket && text.trim()) {
-      socket.send(text);
+    if (dataConnectionRef.current && text.trim()) {
+      console.log("📤 Sending message:", text);
+      dataConnectionRef.current.send(text);
       handleNewMessage({ type: "sender", message: text });
       setText("");
+    } else if (!dataConnectionRef.current) {
+      console.error("No data connection established");
     }
   };
 
@@ -77,7 +102,7 @@ export const usePeerChat = () => {
   useEffect(() => {
     if (!peer || !partnerPeerId) return;
 
-    console.log("Setting up video connection");
+    console.log("Setting up video connection and data channel");
     console.log("Partner peer ID:", partnerPeerId);
     console.log("Should initiate call:", shouldInitiateCall);
 
@@ -88,6 +113,7 @@ export const usePeerChat = () => {
       });
       setMyStream(stream);
 
+      // Set up video call
       peer.on("call", (incomingCall) => {
         console.log("📞 Incoming call, answering...");
         incomingCall.answer(stream);
@@ -99,7 +125,27 @@ export const usePeerChat = () => {
 
       if (shouldInitiateCall) {
         console.log("📞 I'm initiating the call to:", partnerPeerId);
+        
+        // Initiate data connection
         setTimeout(() => {
+          const dataConn = peer.connect(partnerPeerId);
+          dataConnectionRef.current = dataConn;
+
+          dataConn.on("open", () => {
+            console.log("✅ Data connection opened (outgoing)");
+          });
+
+          dataConn.on("data", (data) => {
+            console.log("📩 Received message:", data);
+            handleNewMessage({ type: "receiver", message: data as string });
+          });
+
+          dataConn.on("close", () => {
+            console.log("❌ Data connection closed");
+            dataConnectionRef.current = null;
+          });
+
+          // Initiate video call
           const call = peer.call(partnerPeerId, stream);
           call.on("stream", (remote) => {
             console.log("📹 Received remote stream from outgoing call");
@@ -107,13 +153,14 @@ export const usePeerChat = () => {
           });
         }, 1000);
       } else {
-        console.log("👂 Waiting for incoming call...");
+        console.log("👂 Waiting for incoming call and data connection...");
       }
     })();
-  }, [partnerPeerId, peer, shouldInitiateCall]);
+  }, [partnerPeerId, peer, shouldInitiateCall, handleNewMessage]);
 
   return {
     setText,
+    text,
     messages,
     handleSend,
     myId,

@@ -4,23 +4,19 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
 export const VideoChat: React.FC = () => {
-  const { setText, messages, status, myStream, remoteStream, findPartner } =
+  const { setText, text, messages, handleSend, status, myStream, remoteStream, findPartner } =
     usePeerChat();
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (myVideoRef.current && myStream) {
-      console.log("Setting my stream");
-      console.log("MY STREAM: ", myStream);
       myVideoRef.current.srcObject = myStream;
     }
   }, [myStream]);
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
-      console.log("Setting remote stream");
-      console.log("REMOTE STREAM: ", remoteStream);
       remoteVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
@@ -36,6 +32,11 @@ export const VideoChat: React.FC = () => {
       {item.message}
     </div>
   );
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSend();
+  };
 
   return (
     <div className="flex flex-col border border-red-500 h-dvh p-6 gap-4">
@@ -80,13 +81,14 @@ export const VideoChat: React.FC = () => {
           </div>
 
           <div className="col-span-3 border border-black flex relative flex-col">
-            <div>
+            <div className="flex-1 overflow-y-auto">
               {messages.map((msg, index) => (
                 <div key={index}>{renderMessage({ item: msg })}</div>
               ))}
             </div>
-            <div className="flex items-center gap-2 absolute bottom-4 w-full px-4">
+            <form onSubmit={handleSubmit} className="flex items-center gap-2 absolute bottom-4 w-full px-4">
               <Input
+                value={text}
                 onChange={(e) => setText(e.target.value)}
                 className="p-4"
                 type="text"
@@ -95,7 +97,7 @@ export const VideoChat: React.FC = () => {
               <Button type="submit" variant="default">
                 SEND
               </Button>
-            </div>
+            </form>
           </div>
         </div>
       </div>

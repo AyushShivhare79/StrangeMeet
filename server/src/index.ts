@@ -18,6 +18,7 @@ io.on("connection", (socket) => {
 
   socket.on("find-partner", ({ peerId }: { peerId: string }) => {
     const alreadyWaiting = waitingQueue.some((u) => u.socketId === socket.id);
+    
     if (alreadyWaiting) {
       return;
     }
