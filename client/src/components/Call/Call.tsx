@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from "react";
-import { usePeerChat } from "../../hook/usePeerChat";
+import { usePeerChat, type Message } from "../../hook/usePeerChat";
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 
 export const VideoChat: React.FC = () => {
-  const { myId, status, myStream, remoteStream, findPartner } = usePeerChat();
+  const { setText, messages, status, myStream, remoteStream, findPartner } =
+    usePeerChat();
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -23,6 +25,18 @@ export const VideoChat: React.FC = () => {
     }
   }, [remoteStream]);
 
+  const renderMessage = ({ item }: { item: Message }) => (
+    <div
+      className={`p-3 rounded-3xl m-2 ${
+        item.type === "receiver"
+          ? "self-start bg-[#1f1e25] text-white"
+          : "self-end	 bg-[#5720ff] text-white"
+      }`}
+    >
+      {item.message}
+    </div>
+  );
+
   return (
     <div className="flex flex-col border border-red-500 h-dvh p-6 gap-4">
       <div className="flex border border-black rounded-xl w-full justify-between items-center px-4 py-2 mb-4">
@@ -33,26 +47,24 @@ export const VideoChat: React.FC = () => {
         </div>
       </div>
 
-      {/* <p>{myId}</p> */}
-
       <div className="border h-full space-y-2 border-black">
         <div className="grid grid-cols-5 gap-4 h-full p-4">
           <div className="col-span-2 flex flex-col items-center gap-4 border border-black">
             <div>
               <video
-                ref={myVideoRef}
+                ref={remoteVideoRef}
                 autoPlay
                 playsInline
-                muted
                 className="w-80 h-80 rounded-md bg-black"
               />
             </div>
 
             <div>
               <video
-                ref={remoteVideoRef}
+                ref={myVideoRef}
                 autoPlay
                 playsInline
+                muted
                 className="w-80 h-80 rounded-md bg-black"
               />
             </div>
@@ -66,8 +78,24 @@ export const VideoChat: React.FC = () => {
               Start Chat
             </Button>
           </div>
-          <div className="col-span-3 border border-black flex items-center justify-center">
-            <div>Chat</div>
+
+          <div className="col-span-3 border border-black flex relative flex-col">
+            <div>
+              {messages.map((msg, index) => (
+                <div key={index}>{renderMessage({ item: msg })}</div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 absolute bottom-4 w-full px-4">
+              <Input
+                onChange={(e) => setText(e.target.value)}
+                className="p-4"
+                type="text"
+                placeholder="Type here..."
+              />
+              <Button type="submit" variant="default">
+                SEND
+              </Button>
+            </div>
           </div>
         </div>
       </div>
