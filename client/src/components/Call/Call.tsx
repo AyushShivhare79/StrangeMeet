@@ -1,18 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { usePeerChat } from "../../hook/usePeerChat";
+import React, { useEffect, useRef } from "react";
+import { usePeerChat, type Message } from "../../hook/usePeerChat";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
-interface Message {
-  type: "sender" | "receiver";
-  message: string;
-}
-
 export const VideoChat: React.FC = () => {
-  const { status, myStream, remoteStream, findPartner } = usePeerChat();
+  const { setText, messages, status, myStream, remoteStream, findPartner } =
+    usePeerChat();
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
     if (myVideoRef.current && myStream) {
@@ -29,10 +24,6 @@ export const VideoChat: React.FC = () => {
       remoteVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
-
-  const handleNewMessage = useCallback((newMessage: Message) => {
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
-  }, []);
 
   const renderMessage = ({ item }: { item: Message }) => (
     <div
@@ -90,19 +81,17 @@ export const VideoChat: React.FC = () => {
 
           <div className="col-span-3 border border-black flex relative flex-col">
             <div>
-              {renderMessage({ item: { type: "receiver", message: "Hello!" } })}
-              {renderMessage({
-                item: { type: "sender", message: "Hi there!" },
-              })}
-              {renderMessage({
-                item: { type: "receiver", message: "How are you?" },
-              })}
-              {renderMessage({
-                item: { type: "sender", message: "I'm good, thanks!" },
-              })}
+              {messages.map((msg, index) => (
+                <div key={index}>{renderMessage({ item: msg })}</div>
+              ))}
             </div>
             <div className="flex items-center gap-2 absolute bottom-4 w-full px-4">
-              <Input className="p-4" type="text" placeholder="Type here..." />
+              <Input
+                onChange={(e) => setText(e.target.value)}
+                className="p-4"
+                type="text"
+                placeholder="Type here..."
+              />
               <Button type="submit" variant="default">
                 SEND
               </Button>

@@ -5,22 +5,39 @@ import config from "./config/config";
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: config.clientSideUrl } });
+const io = new Server(server, { cors: { origin: "*" } });
 
-let waitingUser: { socketId: string; peerId: string } | null = null;
-const rooms: Record<string, [string, string]> = {};
+// Use a queue instead of single variable
+const waitingQueue: Array<{ socketId: string; peerId: string }> = [];
+const activeRooms = new Map<
+  string,
+  { users: [string, string]; createdAt: number }
+>();
 
 io.on("connection", (socket) => {
   console.log("User connected", socket.id);
 
   socket.on("find-partner", ({ peerId }: { peerId: string }) => {
-    console.log("find-partner from", socket.id, "with peerId", peerId);
+    const alreadyWaiting = waitingQueue.some((u) => u.socketId === socket.id);
+    if (alreadyWaiting) {
+      return;
+    }
 
-    if (waitingUser) {
-      const roomId = `${waitingUser.socketId}-${socket.id}`;
-      rooms[roomId] = [waitingUser.socketId, socket.id];
+    if (waitingQueue.length > 0) {
+      // Match with first waiting user
+      const partner = waitingQueue.shift()!;
+      const roomId = `${partner.socketId}-${socket.id}`;
 
-      io.to(waitingUser.socketId).emit("partner-found", {
+      activeRooms.set(roomId, {
+        users: [partner.socketId, socket.id],
+        createdAt: Date.now(),
+      });
+
+      // Join socket.io room
+      socket.join(roomId);
+      io.sockets.sockets.get(partner.socketId)?.join(roomId);
+
+      io.to(partner.socketId).emit("partner-found", {
         roomId,
         partnerPeerId: peerId,
         shouldInitiateCall: true,
@@ -28,23 +45,53 @@ io.on("connection", (socket) => {
 
       io.to(socket.id).emit("partner-found", {
         roomId,
-        partnerPeerId: waitingUser.peerId,
+        partnerPeerId: partner.peerId,
         shouldInitiateCall: false,
       });
-
-      waitingUser = null;
     } else {
-      waitingUser = { socketId: socket.id, peerId };
+      // Add to waiting queue
+      waitingQueue.push({ socketId: socket.id, peerId });
       io.to(socket.id).emit("waiting");
     }
   });
 
   socket.on("disconnect", () => {
     console.log("User disconnected", socket.id);
-    if (waitingUser && waitingUser.socketId === socket.id) {
-      waitingUser = null;
+
+    // Remove from waiting queue
+    const index = waitingQueue.findIndex((u) => u.socketId === socket.id);
+    if (index !== -1) {
+      waitingQueue.splice(index, 1);
     }
+
+    // Handle room cleanup
+    for (const [roomId, room] of activeRooms.entries()) {
+      if (room.users.includes(socket.id)) {
+        const partnerId = room.users.find((id) => id !== socket.id);
+        if (partnerId) {
+          io.to(partnerId).emit("partner-disconnected");
+        }
+        activeRooms.delete(roomId);
+      }
+    }
+  });
+
+  socket.on("skip-partner", () => {
+    // Handle "Next" button functionality
+    socket.emit("partner-disconnected");
+    socket.emit("find-partner", { peerId: socket.id });
   });
 });
 
-server.listen(5000, () => console.log("Server running on 5000"));
+// Cleanup old rooms (optional)
+setInterval(() => {
+  const now = Date.now();
+  for (const [roomId, room] of activeRooms.entries()) {
+    // Remove rooms older than 1 hour
+    if (now - room.createdAt > 3600000) {
+      activeRooms.delete(roomId);
+    }
+  }
+}, 300000); // Run every 5 minutes
+
+server.listen(5000, () => console.log(`Server running on ${config.port}`));

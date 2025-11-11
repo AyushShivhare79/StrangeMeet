@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import io from "socket.io-client";
 import Peer from "peerjs";
 
 const socket = io(import.meta.env.VITE_SOCKET_SERVER_URL);
+
+export interface Message {
+  type: "sender" | "receiver";
+  message: string;
+}
 
 export const usePeerChat = () => {
   const [peer, setPeer] = useState<Peer>();
@@ -12,7 +17,15 @@ export const usePeerChat = () => {
   const [myStream, setMyStream] = useState<MediaStream>();
   const [remoteStream, setRemoteStream] = useState<MediaStream>();
   const [status, setStatus] = useState<string>("idle");
-  
+
+  const [text, setText] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      type: "receiver",
+      message: "Hello! How are you?",
+    },
+    { type: "sender", message: "I'm good, thank you! How about you?" },
+  ]);
 
   useEffect(() => {
     const newPeer = new Peer();
@@ -39,6 +52,18 @@ export const usePeerChat = () => {
     );
   }, []);
 
+  const handleNewMessage = useCallback((newMessage: Message) => {
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
+  }, []);
+
+  const handleSend = () => {
+    if (socket && text.trim()) {
+      socket.send(text);
+      handleNewMessage({ type: "sender", message: text });
+      setText("");
+    }
+  };
+
   const findPartner = () => {
     if (!myId) {
       console.error("Peer ID not ready yet");
@@ -59,7 +84,7 @@ export const usePeerChat = () => {
     (async () => {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
-        audio: true,
+        audio: false,
       });
       setMyStream(stream);
 
@@ -87,5 +112,14 @@ export const usePeerChat = () => {
     })();
   }, [partnerPeerId, peer, shouldInitiateCall]);
 
-  return { myId, status, myStream, remoteStream, findPartner };
+  return {
+    setText,
+    messages,
+    handleSend,
+    myId,
+    status,
+    myStream,
+    remoteStream,
+    findPartner,
+  };
 };
