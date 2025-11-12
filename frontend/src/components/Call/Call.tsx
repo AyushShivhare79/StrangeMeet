@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from "react";
-import { usePeerChat, type Message } from "../../hook/usePeerChat";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+import React, { useEffect, useRef } from 'react'
+import { usePeerChat, type Message } from '../../hook/usePeerChat'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
 
 export const VideoChat: React.FC = () => {
   const {
@@ -12,39 +12,39 @@ export const VideoChat: React.FC = () => {
     status,
     myStream,
     remoteStream,
-    findPartner,
-  } = usePeerChat();
-  const myVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+    findPartner
+  } = usePeerChat()
+  const myVideoRef = useRef<HTMLVideoElement>(null)
+  const remoteVideoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
     if (myVideoRef.current && myStream) {
-      myVideoRef.current.srcObject = myStream;
+      myVideoRef.current.srcObject = myStream
     }
-  }, [myStream]);
+  }, [myStream])
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.srcObject = remoteStream
     }
-  }, [remoteStream]);
+  }, [remoteStream])
 
   const renderMessage = ({ item }: { item: Message }) => (
     <div
       className={`p-3 rounded-3xl m-2 ${
-        item.type === "receiver"
-          ? "self-start bg-[#1f1e25] text-white"
-          : "self-end	 bg-[#5720ff] text-white"
+        item.type === 'receiver'
+          ? 'self-start bg-[#1f1e25] text-white'
+          : 'self-end	 bg-[#5720ff] text-white'
       }`}
     >
       {item.message}
     </div>
-  );
+  )
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSend();
-  };
+    e.preventDefault()
+    handleSend()
+  }
 
   return (
     <div className="flex flex-col border border-red-500 h-dvh p-6 gap-4">
@@ -113,7 +113,7 @@ export const VideoChat: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default VideoChat;
+export default VideoChat
